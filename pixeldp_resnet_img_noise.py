@@ -49,7 +49,7 @@ class Model(object):
         self._delta_dp   = 0.05
 
         # Differential Privacy parameters
-        self._image_size = 32
+        self._image_size = self.hps.image_size
 
         # Internal
         self._extra_train_ops = []

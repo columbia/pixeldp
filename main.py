@@ -24,8 +24,10 @@ import json
 
 import cifar_input
 import numpy as np
-import pixeldp_conv1
-import pixeldp_img_noise
+import pixeldp_resnet_conv1
+import pixeldp_resnet_img_noise
+import pixeldp_cnn_conv1
+#  import pixeldp_resnet_img_noise
 import tensorflow as tf
 
 import utils
@@ -43,8 +45,8 @@ tf.app.flags.DEFINE_string('eval_data_path',
                            'Filepattern for eval data')
 tf.app.flags.DEFINE_string('model_dir', 'model',
                            'Directory to keep training outputs.')
-tf.app.flags.DEFINE_integer('eval_batch_count', 50,
-                            'Number of batches to eval.')
+tf.app.flags.DEFINE_integer('eval_data_size', 5000,
+                            'Size of test set to eval on.')
 tf.app.flags.DEFINE_integer('max_steps', 60000,
                             'Max number of steps for training a model.')
 tf.app.flags.DEFINE_string('data_dir', 'data',
@@ -63,13 +65,23 @@ def evaluate(hps, model, dir_name=None, rerun=False):
         # run only new models
         return
 
-    images, labels = cifar_input.build_input(
-        FLAGS.dataset,
-        FLAGS.eval_data_path,
-        hps.batch_size,
-        hps.image_standardization,
-        FLAGS.mode
-    )
+    if FLAGS.dataset == 'mnist':
+        mnist   = tf.contrib.learn.datasets.load_dataset("mnist")
+        dataset = mnist.test
+        images  = tf.placeholder(tf.float32,
+                                 [hps.batch_size, 784],
+                                 name='x-input')
+        labels  = tf.placeholder(tf.int64,
+                                 [hps.batch_size],
+                                 name='y-input')
+    elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
+        images, labels = cifar_input.build_input(
+            FLAGS.dataset,
+            FLAGS.eval_data_path,
+            hps.batch_size,
+            hps.image_standardization,
+            FLAGS.mode
+        )
     model = model.Model(hps, images, labels, FLAGS.mode)
     model.build_graph()
     saver = tf.train.Saver()
@@ -93,10 +105,18 @@ def evaluate(hps, model, dir_name=None, rerun=False):
         'pred_truth':  [],
     }
     total_prediction, correct_prediction = 0, 0
-    eval_data_size   = 12
+    eval_data_size   = FLAGS.eval_data_size
     eval_batch_size  = hps.batch_size
     eval_batch_count = int(eval_data_size / eval_batch_size)
     for i in six.moves.range(eval_batch_count):
+        if FLAGS.dataset == 'mnist':
+            xs, ys = dataset.next_batch(hps.batch_size, fake_data=False)
+            args = {model.noise_scale: 1.0,
+                    model._images: xs,
+                    model._labels: ys}
+        elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
+            args = {model.noise_scale: 1.0}
+
         (
             summaries,
             loss,
@@ -111,7 +131,7 @@ def evaluate(hps, model, dir_name=None, rerun=False):
                 model.labels,
                 model.global_step,
             ],
-            {model.noise_scale: 1.0})
+            args)
 
         print("Done: {}/{}".format(eval_batch_size*i, eval_data_size))
         truth = np.argmax(truth, axis=1)[:hps.batch_size]
@@ -192,88 +212,104 @@ def evaluate(hps, model, dir_name=None, rerun=False):
     summary_writer.flush()
 
 def train(hps, model, dir_name=None):
-  """Training loop."""
-  if dir_name == None:
-      dir_name = FLAGS.data_dir + "/" + FLAGS.model_dir
+    """Training loop."""
+    if dir_name == None:
+        dir_name = FLAGS.data_dir + "/" + FLAGS.model_dir
 
-  images, labels = cifar_input.build_input(
-      FLAGS.dataset,
-      FLAGS.train_data_path,
-      hps.batch_size,
-      hps.image_standardization,
-      FLAGS.mode
-  )
-  model = model.Model(hps, images, labels, FLAGS.mode)
-  model.build_graph()
+    if FLAGS.dataset == 'mnist':
+        mnist   = tf.contrib.learn.datasets.load_dataset("mnist")
+        dataset = mnist.train
+        images  = tf.placeholder(tf.float32,
+                                 [hps.batch_size, 784],
+                                 name='x-input')
+        labels  = tf.placeholder(tf.int64,
+                                 [hps.batch_size],
+                                 name='y-input')
+    elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
+        images, labels = cifar_input.build_input(
+            FLAGS.dataset,
+            FLAGS.eval_data_path,
+            hps.batch_size,
+            hps.image_standardization,
+            FLAGS.mode
+        )
+    model = model.Model(hps, images, labels, FLAGS.mode)
+    model.build_graph()
 
-  param_stats = tf.contrib.tfprof.model_analyzer.print_model_analysis(
-      tf.get_default_graph(),
-      tfprof_options=tf.contrib.tfprof.model_analyzer.
-          TRAINABLE_VARS_PARAMS_STAT_OPTIONS)
-  sys.stdout.write('total_params: %d\n' % param_stats.total_parameters)
+    param_stats = tf.contrib.tfprof.model_analyzer.print_model_analysis(
+        tf.get_default_graph(),
+        tfprof_options=tf.contrib.tfprof.model_analyzer.
+            TRAINABLE_VARS_PARAMS_STAT_OPTIONS)
+    sys.stdout.write('total_params: %d\n' % param_stats.total_parameters)
 
-  tf.contrib.tfprof.model_analyzer.print_model_analysis(
-      tf.get_default_graph(),
-      tfprof_options=tf.contrib.tfprof.model_analyzer.FLOAT_OPS_OPTIONS)
+    tf.contrib.tfprof.model_analyzer.print_model_analysis(
+        tf.get_default_graph(),
+        tfprof_options=tf.contrib.tfprof.model_analyzer.FLOAT_OPS_OPTIONS)
 
-  truth         = tf.argmax(model.labels, axis=1)
-  predictions   = tf.argmax(model.predictions, axis=1)
-  one_hot_preds = tf.one_hot(predictions, depth=hps.num_classes, dtype=tf.float32)
-  votes         = tf.reshape(one_hot_preds, [hps.n_draws, hps.batch_size, hps.num_classes])
-  predictions   = tf.argmax(tf.reduce_sum(votes, axis=0), axis=1)
-  precision     = tf.reduce_mean(tf.to_float(tf.equal(predictions, truth)))
+    truth         = tf.argmax(model.labels, axis=1)
+    predictions   = tf.argmax(model.predictions, axis=1)
+    one_hot_preds = tf.one_hot(predictions, depth=hps.num_classes, dtype=tf.float32)
+    votes         = tf.reshape(one_hot_preds, [hps.n_draws, hps.batch_size, hps.num_classes])
+    predictions   = tf.argmax(tf.reduce_sum(votes, axis=0), axis=1)
+    precision     = tf.reduce_mean(tf.to_float(tf.equal(predictions, truth)))
 
-  summary_hook = tf.train.SummarySaverHook(
-      save_steps=100,
-      output_dir=dir_name,
-      summary_op=tf.summary.merge([model.summaries,
-                                   tf.summary.scalar('Precision', precision)]))
+    summary_hook = tf.train.SummarySaverHook(
+        save_steps=100,
+        output_dir=dir_name,
+        summary_op=tf.summary.merge([model.summaries,
+                                     tf.summary.scalar('Precision', precision)]))
 
-  logging_hook = tf.train.LoggingTensorHook(
-      tensors={'step': model.global_step,
-               'loss': model.cost,
-               'precision': precision},
-      every_n_iter=100)
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors={'step': model.global_step,
+                 'loss': model.cost,
+                 'precision': precision},
+        every_n_iter=100)
 
-  class _LearningRateSetterHook(tf.train.SessionRunHook):
-    """Sets learning_rate based on global step."""
+    class _LearningRateSetterHook(tf.train.SessionRunHook):
+        """Sets learning_rate based on global step."""
 
-    def begin(self):
-      self._lrn_rate = 0.1
+        def begin(self):
+            self._lrn_rate = 0.1
+            self._schedule = list(zip(hps.lrn_rte_changes, hps.lrn_rte_vals))
 
-    def before_run(self, run_context):
-      return tf.train.SessionRunArgs(
-          model.global_step,  # Asks for global step value.
-          feed_dict={model.lrn_rate: self._lrn_rate})  # Sets learning rate
+        def before_run(self, run_context):
+            return tf.train.SessionRunArgs(
+                model.global_step,  # Asks for global step value.
+                feed_dict={model.lrn_rate: self._lrn_rate})  # Sets learning rate
 
-    def after_run(self, run_context, run_values):
-      train_step = run_values.results
-      if train_step < 40000:
-        self._lrn_rate = 0.1
-      elif train_step < 60000:
-        self._lrn_rate = 0.01
-      elif train_step < 80000:
-        self._lrn_rate = 0.001
-      else:
-        self._lrn_rate = 0.0001
+        def after_run(self, run_context, run_values):
+            train_step = run_values.results
+            if len(self._schedule) > 0 and train_step >= self._schedule[0][0]:
+                # Update learning rate according to the schedule.
+                self._lrn_rate = self._schedule[0][1]
+                self._schedule = self._schedule[1:]
 
-  print("START TRAINING")
-  steps       = 0
-  with tf.train.MonitoredTrainingSession(
-      checkpoint_dir=dir_name,
-      hooks=[logging_hook,
-             _LearningRateSetterHook(),
-             tf.train.StopAtStepHook(last_step=FLAGS.max_steps),],
-      chief_only_hooks=[summary_hook],
-      # Since we provide a SummarySaverHook, we need to disable default
-      # SummarySaverHook. To do that we set save_summaries_steps to 0.
-      save_summaries_steps=0,
-      config=tf.ConfigProto(allow_soft_placement=True)) as mon_sess:
-    while not mon_sess.should_stop():
-      s = 1.0 - min(0.99975**steps, 0.9)
-      if s > 0.9: s = 1.0  # this triggers around 10k steps
-      mon_sess.run(model.train_op, {model.noise_scale: s})
-      steps += 1
+    print("START TRAINING")
+    steps       = 0
+    with tf.train.MonitoredTrainingSession(
+        checkpoint_dir=dir_name,
+        hooks=[logging_hook,
+               _LearningRateSetterHook(),
+               tf.train.StopAtStepHook(last_step=FLAGS.max_steps),],
+        chief_only_hooks=[summary_hook],
+        # Since we provide a SummarySaverHook, we need to disable default
+        # SummarySaverHook. To do that we set save_summaries_steps to 0.
+        save_summaries_steps=0,
+        config=tf.ConfigProto(allow_soft_placement=True)) as mon_sess:
+      while not mon_sess.should_stop():
+        s = 1.0 - min(0.99975**steps, 0.9)
+        if s > 0.9: s = 1.0  # this triggers around 10k steps
+
+        if FLAGS.dataset == 'mnist':
+            xs, ys = dataset.next_batch(hps.batch_size, fake_data=False)
+            args = {model.noise_scale: s,
+                    model._images: xs,
+                    model._labels: ys}
+        elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
+            args = {model.noise_scale: s}
+
+        mon_sess.run(model.train_op, args)
+        steps += 1
 
 def run_one():
     if FLAGS.num_gpus == 0:
@@ -283,17 +319,38 @@ def run_one():
     else:
         raise ValueError('Only support 0 or 1 gpu.')
 
-    if FLAGS.mode == 'train':
-        batch_size = 128
-        n_draws    = 1
-    elif FLAGS.mode == 'eval':
-        batch_size = 4
-        n_draws    = 500
+    if FLAGS.dataset == 'mnist':
+        image_size      = 28
+        num_classes     = 10
+        relu_leakiness  = 0.0
+        lrn_rate        = 0.01
+        lrn_rte_changes = []
+        lrn_rte_vals    = []
+        if FLAGS.mode == 'train':
+            batch_size = 128
+            n_draws    = 1
+        elif FLAGS.mode == 'eval':
+            batch_size = 100
+            n_draws    = 500
+    else:
+        lrn_rate        = 0.1
+        lrn_rte_changes = [40000, 60000, 80000]
+        lrn_rte_vals    = [0.01, 0.001, 0.0001]
+        if FLAGS.mode == 'train':
+            batch_size = 128
+            n_draws    = 1
+        elif FLAGS.mode == 'eval':
+            batch_size = 4
+            n_draws    = 500
 
     if FLAGS.dataset == 'cifar10':
-        num_classes = 10
+        image_size     = 32
+        num_classes    = 10
+        relu_leakiness = 0.1
     elif FLAGS.dataset == 'cifar100':
-        num_classes = 100
+        image_size     = 32
+        num_classes    = 100
+        relu_leakiness = 0.1
 
     # noise_schemes for pixeldp_img_noise:
     #   - l1: L1 attack bound, L1 sensitivity (Laplace mech.).
@@ -311,24 +368,30 @@ def run_one():
     #               (Gaussian).
     hps = utils.HParams(batch_size=batch_size,
                         num_classes=num_classes,
-                        min_lrn_rate=0.0001,
-                        lrn_rate=0.1,
+                        image_size=image_size,
+                        lrn_rate=lrn_rate,
+                        lrn_rte_changes=lrn_rte_changes,
+                        lrn_rte_vals=lrn_rte_vals,
                         num_residual_units=4,
                         use_bottleneck=False,
                         weight_decay_rate=0.0002,
-                        relu_leakiness=0.1,
+                        relu_leakiness=relu_leakiness,
                         optimizer='mom',
                         image_standardization=False,
                         dropout=False,
                         n_draws=n_draws,
                         noise_scheme='l2_l2_s1',
-                        attack_norm_bound=0.1)
+                        attack_norm_bound=0.3)
 
+    # _model can be:
+    #   pixeldp_resnet_conv1 pixeldp_resnet_img_noise
+    #   pixeldp_cnn_conv1 pixeldp_cnn_img_noise
+    _model = pixeldp_cnn_conv1
     with tf.device(dev):
         if FLAGS.mode == 'train':
-            train(hps, pixeldp_conv1)
+            train(hps, _model)
         elif FLAGS.mode == 'eval':
-            evaluate(hps, pixeldp_conv1)
+            evaluate(hps, _model)
 
 def main(_):
     run_one()
