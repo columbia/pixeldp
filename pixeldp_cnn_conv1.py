@@ -102,7 +102,8 @@ class Model(object):
                 filter_size = 5
                 in_filters  = 1
                 out_filters = 32
-                strides     = self._stride_arr(2)
+                stride      = 2
+                strides     = self._stride_arr(stride)
                 n = filter_size * filter_size * out_filters
                 self.kernel = tf.get_variable(
                   'DW',
@@ -114,7 +115,7 @@ class Model(object):
                 if self.hps.noise_scheme == 'l2_l2_s1':
                     # Parseval projection, see: https://arxiv.org/abs/1704.08847
                     self._parseval_convs.append(self.kernel)
-                    k = self.kernel / float(filter_size)
+                    k = stride * self.kernel / float(filter_size)
                 elif self.hps.noise_scheme == 'l1_l2_s1':
                     # Sensitivity 1 by L2 normalization
                     k = tf.nn.l2_normalize(self.kernel, dim=[0, 1, 3])
