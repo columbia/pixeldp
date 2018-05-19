@@ -68,12 +68,14 @@ def evaluate(hps, model, dir_name=None, rerun=False):
     if FLAGS.dataset == 'mnist':
         mnist   = tf.contrib.learn.datasets.load_dataset("mnist")
         dataset = mnist.test
-        images  = tf.placeholder(tf.float32,
+        _images  = tf.placeholder(tf.float32,
                                  [hps.batch_size, 784],
                                  name='x-input')
-        labels  = tf.placeholder(tf.int64,
+        images  = tf.reshape(_images, [-1, 28, 28, 1])
+        _labels  = tf.placeholder(tf.int64,
                                  [hps.batch_size],
                                  name='y-input')
+        labels  = tf.one_hot(_labels, hps.num_classes)
     elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
         images, labels = cifar_input.build_input(
             FLAGS.dataset,
@@ -112,8 +114,8 @@ def evaluate(hps, model, dir_name=None, rerun=False):
         if FLAGS.dataset == 'mnist':
             xs, ys = dataset.next_batch(hps.batch_size, fake_data=False)
             args = {model.noise_scale: 1.0,
-                    model._images: xs,
-                    model._labels: ys}
+                    _images: xs,
+                    _labels: ys}
         elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
             args = {model.noise_scale: 1.0}
 
@@ -219,12 +221,14 @@ def train(hps, model, dir_name=None):
     if FLAGS.dataset == 'mnist':
         mnist   = tf.contrib.learn.datasets.load_dataset("mnist")
         dataset = mnist.train
-        images  = tf.placeholder(tf.float32,
+        _images  = tf.placeholder(tf.float32,
                                  [hps.batch_size, 784],
                                  name='x-input')
-        labels  = tf.placeholder(tf.int64,
+        images  = tf.reshape(_images, [-1, 28, 28, 1])
+        _labels  = tf.placeholder(tf.int64,
                                  [hps.batch_size],
                                  name='y-input')
+        labels  = tf.one_hot(_labels, hps.num_classes)
     elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
         images, labels = cifar_input.build_input(
             FLAGS.dataset,
@@ -303,8 +307,8 @@ def train(hps, model, dir_name=None):
         if FLAGS.dataset == 'mnist':
             xs, ys = dataset.next_batch(hps.batch_size, fake_data=False)
             args = {model.noise_scale: s,
-                    model._images: xs,
-                    model._labels: ys}
+                    _images: xs,
+                    _labels: ys}
         elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
             args = {model.noise_scale: s}
 

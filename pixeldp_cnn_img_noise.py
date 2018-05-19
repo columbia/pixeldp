@@ -83,9 +83,8 @@ class Model(object):
 
     def _build_model(self):
         """Build the core model within the graph."""
-        # TODO: make this outside the CNN, it's MNIST specific
-        input_layer = tf.reshape(self._images, [-1, 28, 28, 1])
-        self.labels = tf.one_hot(self._labels, self.hps.num_classes)
+        input_layer = self._images
+        self.labels = self._labels
 
         with tf.variable_scope('im_dup'):
             # Duplicate images to get multiple draws from the DP label
