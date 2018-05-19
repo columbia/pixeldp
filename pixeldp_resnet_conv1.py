@@ -99,7 +99,7 @@ class Model(object):
                 in_filters  = 3
                 out_filters = 16
                 stride      = 1
-                strides     = self._stride_arr(2)
+                strides     = self._stride_arr(stride)
                 n = filter_size * filter_size * out_filters
                 self.kernel = tf.get_variable(
                   'DW',

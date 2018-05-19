@@ -92,6 +92,7 @@ class Model(object):
             # ditribution (each duplicate gets an independent noise draw
             # before going through the rest of the network).
             ones = tf.ones([len(input_layer.get_shape())-1], dtype=tf.int32)
+            x = tf.tile(input_layer, tf.concat([[self.hps.n_draws], ones], axis=0))
 
             ############
             # DP noise #
@@ -123,7 +124,6 @@ class Model(object):
                 x            = x + self.noise
             # DP noise #
             ############
-            x = tf.tile(input_layer, tf.concat([[self.hps.n_draws], ones], axis=0))
 
         with tf.variable_scope('init'):
             with tf.variable_scope('init_conv'):
