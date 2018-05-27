@@ -114,8 +114,8 @@ class Model(object):
                 if self.hps.noise_scheme == 'l2_l2_s1':
                     # Parseval projection, see: https://arxiv.org/abs/1704.08847
                     self._parseval_convs.append(self.kernel)
-                    sensitivity_rescaling = math.ceil(stride / filter_size)
-                    k = sensitivity_rescaling * self.kernel
+                    sensitivity_rescaling = math.ceil(filter_size / stride)
+                    k = self.kernel / sensitivity_rescaling
                 elif self.hps.noise_scheme == 'l1_l2_s1':
                     # Sensitivity 1 by L2 normalization
                     k = tf.nn.l2_normalize(self.kernel, dim=[0, 1, 3])
