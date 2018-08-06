@@ -96,7 +96,7 @@ class Model(object):
         with tf.variable_scope('init'):
             with tf.variable_scope('init_conv'):
                 filter_size = 3
-                in_filters  = 3
+                in_filters  = x.get_shape()[-1]
                 out_filters = 16
                 stride      = 1
                 strides     = self._stride_arr(stride)

@@ -22,8 +22,9 @@ import sys
 import os
 import json
 
-import cifar_input
+from datasets import cifar, mnist
 import numpy as np
+import models.params
 import pixeldp_resnet_conv1
 import pixeldp_resnet_img_noise
 import pixeldp_cnn_conv1
@@ -33,19 +34,12 @@ import tensorflow as tf
 import utils
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('dataset', 'cifar10', 'cifar10 or cifar100.')
+tf.app.flags.DEFINE_string('dataset', 'cifar10', 'mnist, cifar10 or cifar100.')
 tf.app.flags.DEFINE_string('mode', 'train', 'train or eval.')
-# Download CIFAR10 or CIFAR100 from:
-#   e.g. https://www.cs.toronto.edu/~kriz/cifar-100-binary.tar.gz
-tf.app.flags.DEFINE_string('train_data_path',
-                           '/home/mathias/data/cifar10_data/cifar-10-batches-bin/data_batch*',
-                           'Filepattern for training data.')
-tf.app.flags.DEFINE_string('eval_data_path',
-                           '/home/mathias/data/cifar10_data/cifar-10-batches-bin/test_batch*',
-                           'Filepattern for eval data')
-tf.app.flags.DEFINE_string('model_dir', 'model',
-                           'Directory to keep training outputs.')
-tf.app.flags.DEFINE_integer('eval_data_size', 5000,
+tf.app.flags.DEFINE_string('data_path', os.path.join(os.path.expanduser("~"), 'datasets'),
+                           'Data dir.')
+tf.app.flags.DEFINE_string('model_dir', 'models', 'Directory to keep training outputs.')
+tf.app.flags.DEFINE_integer('eval_data_size', 10000,
                             'Size of test set to eval on.')
 tf.app.flags.DEFINE_integer('max_steps', 60000,
                             'Max number of steps for training a model.')
@@ -66,20 +60,16 @@ def evaluate(hps, model, dir_name=None, rerun=False):
         return
 
     if FLAGS.dataset == 'mnist':
-        mnist   = tf.contrib.learn.datasets.load_dataset("mnist")
-        dataset = mnist.test
-        _images  = tf.placeholder(tf.float32,
-                                 [hps.batch_size, 784],
-                                 name='x-input')
-        images  = tf.reshape(_images, [-1, 28, 28, 1])
-        _labels  = tf.placeholder(tf.int64,
-                                 [hps.batch_size],
-                                 name='y-input')
-        labels  = tf.one_hot(_labels, hps.num_classes)
+        images, labels = mnist.build_input(
+            FLAGS.data_path,
+            hps.batch_size,
+            hps.image_standardization,
+            FLAGS.mode
+        )
     elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
-        images, labels = cifar_input.build_input(
+        images, labels = cifar.build_input(
             FLAGS.dataset,
-            FLAGS.eval_data_path,
+            FLAGS.data_path,
             hps.batch_size,
             hps.image_standardization,
             FLAGS.mode
@@ -112,10 +102,7 @@ def evaluate(hps, model, dir_name=None, rerun=False):
     eval_batch_count = int(eval_data_size / eval_batch_size)
     for i in six.moves.range(eval_batch_count):
         if FLAGS.dataset == 'mnist':
-            xs, ys = dataset.next_batch(hps.batch_size, fake_data=False)
-            args = {model.noise_scale: 1.0,
-                    _images: xs,
-                    _labels: ys}
+            args = {model.noise_scale: 1.0}
         elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
             args = {model.noise_scale: 1.0}
 
@@ -219,20 +206,16 @@ def train(hps, model, dir_name=None):
         dir_name = FLAGS.data_dir + "/" + FLAGS.model_dir
 
     if FLAGS.dataset == 'mnist':
-        mnist   = tf.contrib.learn.datasets.load_dataset("mnist")
-        dataset = mnist.train
-        _images  = tf.placeholder(tf.float32,
-                                 [hps.batch_size, 784],
-                                 name='x-input')
-        images  = tf.reshape(_images, [-1, 28, 28, 1])
-        _labels  = tf.placeholder(tf.int64,
-                                 [hps.batch_size],
-                                 name='y-input')
-        labels  = tf.one_hot(_labels, hps.num_classes)
+        images, labels = mnist.build_input(
+            FLAGS.data_path,
+            hps.batch_size,
+            hps.image_standardization,
+            FLAGS.mode
+        )
     elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
-        images, labels = cifar_input.build_input(
+        images, labels = cifar.build_input(
             FLAGS.dataset,
-            FLAGS.eval_data_path,
+            FLAGS.data_path,
             hps.batch_size,
             hps.image_standardization,
             FLAGS.mode
@@ -300,15 +283,13 @@ def train(hps, model, dir_name=None):
         # SummarySaverHook. To do that we set save_summaries_steps to 0.
         save_summaries_steps=0,
         config=tf.ConfigProto(allow_soft_placement=True)) as mon_sess:
+
       while not mon_sess.should_stop():
         s = 1.0 - min(0.99975**steps, 0.9)
         if s > 0.9: s = 1.0  # this triggers around 10k steps
 
         if FLAGS.dataset == 'mnist':
-            xs, ys = dataset.next_batch(hps.batch_size, fake_data=False)
-            args = {model.noise_scale: s,
-                    _images: xs,
-                    _labels: ys}
+            args = {model.noise_scale: s}
         elif FLAGS.dataset == 'cifar10' or FLAGS.dataset == 'cifar100':
             args = {model.noise_scale: s}
 
@@ -370,7 +351,7 @@ def run_one():
     #               (Gaussian).
     #   - l2_l2_s1: L2 attack bound with L2 sensitivity, sensitivity<=1
     #               (Gaussian).
-    hps = utils.HParams(batch_size=batch_size,
+    hps = models.params.HParams(batch_size=batch_size,
                         num_classes=num_classes,
                         image_size=image_size,
                         lrn_rate=lrn_rate,

@@ -99,7 +99,7 @@ class Model(object):
         with tf.variable_scope('init'):
             with tf.variable_scope('init_conv'):
                 filter_size = 5
-                in_filters  = 1
+                in_filters  = x.get_shape()[-1]
                 out_filters = 32
                 stride      = 2
                 strides     = self._stride_arr(stride)
@@ -308,7 +308,10 @@ class Model(object):
 
     def _fully_connected(self, x, out_dim):
       """FullyConnected layer for final output."""
+      print(x.shape)
       x = tf.reshape(x, [self.hps.batch_size * self.hps.n_draws, -1])
+      print(x.shape)
+      #  exit()
       w = tf.get_variable(
           'DW', [x.get_shape()[1], out_dim],
           initializer=tf.uniform_unit_scaling_initializer(factor=1.0))
