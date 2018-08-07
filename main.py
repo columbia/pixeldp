@@ -25,9 +25,10 @@ import json
 from datasets import cifar, mnist
 import numpy as np
 import models.params
-import pixeldp_resnet_conv1
-import pixeldp_resnet_img_noise
-import pixeldp_cnn_conv1
+from models import pixeldp_cnn
+#  import pixeldp_resnet_conv1
+#  import pixeldp_resnet_img_noise
+#  import pixeldp_cnn_conv1
 #  import pixeldp_resnet_img_noise
 import tensorflow as tf
 
@@ -365,13 +366,21 @@ def run_one():
                         image_standardization=False,
                         dropout=False,
                         n_draws=n_draws,
-                        noise_scheme='l2_l2_s1',
-                        attack_norm_bound=0.3)
+                        dp_epsilon=1.0,
+                        dp_delta=0.05,
+                        attack_norm_bound=0.3,
+                        attack_norm='l2',
+                        sensitivity_norm='l2',
+                        sensitivity_control_scheme='bound',  # bound or optimize
+                        noise_after_n_layers=1,
+                        layer_sensitivity_bounds=['l2_l2'],
+                        noise_after_activation=True,
+                        )
 
     # _model can be:
     #   pixeldp_resnet_conv1 pixeldp_resnet_img_noise
     #   pixeldp_cnn_conv1 pixeldp_cnn_img_noise
-    _model = pixeldp_cnn_conv1
+    _model = pixeldp_cnn
     with tf.device(dev):
         if FLAGS.mode == 'train':
             train(hps, _model)

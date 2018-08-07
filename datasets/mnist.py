@@ -44,7 +44,7 @@ def build_input(data_path, batch_size, standardize_images, mode):
   """
   if mode == 'train':
     dataset = train(data_path, standardize_images)
-  elif mode == 'test':
+  elif mode == 'eval':
     dataset = test(data_path,  standardize_images)
 
   dataset  = dataset.shuffle(10000).repeat()
