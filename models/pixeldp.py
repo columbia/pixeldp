@@ -37,6 +37,17 @@ class Model(object):
           mode: One of 'train' and 'eval'.
         """
         self.hps    = hps
+
+        # To allow specifying only one hps.layer_sensitivity_bounds that is
+        # used for every layer.
+        # TODO: assert that the bounds make sense w.r.t each other and
+        # start/end norms.
+        if len(self.hps.layer_sensitivity_bounds) == 1 and self.hps.noise_after_n_layers > 1:
+            self.layer_sensitivity_bounds =  \
+                    self.hps.layer_sensitivity_bounds * self.hps.noise_after_n_layers
+        else:
+            self.layer_sensitivity_bounds = self.hps.layer_sensitivity_bounds
+
         self.mode   = mode
         self.images = images
         self.labels = labels

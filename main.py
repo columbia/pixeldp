@@ -25,7 +25,7 @@ import json
 from datasets import cifar, mnist
 import numpy as np
 import models.params
-from models import pixeldp_cnn
+from models import pixeldp_cnn, pixeldp_resnet
 #  import pixeldp_resnet_conv1
 #  import pixeldp_resnet_img_noise
 #  import pixeldp_cnn_conv1
@@ -372,7 +372,7 @@ def run_one():
                         attack_norm='l2',
                         sensitivity_norm='l2',
                         sensitivity_control_scheme='bound',  # bound or optimize
-                        noise_after_n_layers=1,
+                        noise_after_n_layers=2,
                         layer_sensitivity_bounds=['l2_l2'],
                         noise_after_activation=True,
                         )

@@ -69,7 +69,7 @@ class Model(pixeldp.Model):
             x = self._conv(
                 "init_conv", x, filter_size, in_filters, out_filters, strides,
                 is_pre_noise=self.hps.noise_after_n_layers >= 1,
-                layer_sensivity_bound=self.hps.layer_sensitivity_bounds[0],
+                layer_sensivity_bound=self.layer_sensitivity_bounds[0],
                 sensitivity_control_scheme=self.hps.sensitivity_control_scheme
             )
 
@@ -86,7 +86,7 @@ class Model(pixeldp.Model):
         x = self._conv(
             "conv2", x, 5, out_filters, 64, self._stride_arr(2),
             is_pre_noise=self.hps.noise_after_n_layers >= 2,
-            layer_sensivity_bound=self.hps.layer_sensitivity_bounds[0],
+            layer_sensivity_bound=self.layer_sensitivity_bounds[1],
             sensitivity_control_scheme=self.hps.sensitivity_control_scheme
         )
 
