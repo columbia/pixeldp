@@ -372,15 +372,13 @@ def run_one():
                         attack_norm='l2',
                         sensitivity_norm='l2',
                         sensitivity_control_scheme='bound',  # bound or optimize
-                        noise_after_n_layers=2,
+                        noise_after_n_layers=1,
                         layer_sensitivity_bounds=['l2_l2'],
                         noise_after_activation=True,
                         )
 
-    # _model can be:
-    #   pixeldp_resnet_conv1 pixeldp_resnet_img_noise
-    #   pixeldp_cnn_conv1 pixeldp_cnn_img_noise
-    _model = pixeldp_cnn
+    # _model can be: pixeldp_cnn or pixeldp_resnet
+    _model = pixeldp_resnet
     with tf.device(dev):
         if FLAGS.mode == 'train':
             train(hps, _model)

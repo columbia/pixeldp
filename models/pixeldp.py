@@ -156,8 +156,7 @@ class Model(object):
 
       return tf.multiply(self.hps.weight_decay_rate, tf.add_n(costs))
 
-    def _conv(self, name, x, filter_size, in_filters, out_filters, strides, is_pre_noise=False,
-              layer_sensivity_bound=None, sensitivity_control_scheme=None):
+    def _conv(self, name, x, filter_size, in_filters, out_filters, strides, position=None):
         """Convolution, with support for sensitivity bounds when they are
         pre-noise."""
 
@@ -171,9 +170,13 @@ class Model(object):
                 tf.float32, initializer=tf.random_normal_initializer(
                     stddev=np.sqrt(2.0/n)))
 
-            if is_pre_noise:
+            if position == None or position > self.hps.noise_after_n_layers:
+                # Post noise: no sensitivity control.
                 return tf.nn.conv2d(x, kernel, strides, padding='SAME')
-            elif layer_sensivity_bound == 'l2_l2':
+
+            sensitivity_control_scheme = self.hps.sensitivity_control_scheme
+            layer_sensivity_bound      = self.layer_sensitivity_bounds[position-1]
+            if layer_sensivity_bound == 'l2_l2':
                 # Parseval projection, see: https://arxiv.org/abs/1704.08847
                 self._parseval_convs.append(kernel)
                 sensitivity_rescaling = math.ceil(filter_size / stride)
