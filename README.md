@@ -1,18 +1,26 @@
-# Setup
+## Train the model.
 
-Download the CIFAR dataset and setup the right path in main.py (or as
-command line args).
+Chose parameters in main.py, then, e.g.:
 
-# Train the model.
+    python3 main.py --num_gpus 1 --dataset cifar10 --mode train
 
-Chose parameters in main.py ll 289-301
+## Eval the model.
 
-    python3 main.py --num_gpus 1 --dataset mnist
+Chose parameters in main.py, then:
 
-# Eval the model.
-
-Chose parameters in main.py ll 289-301
-
-    python3 main.py --num_gpus 1 --mode eval --dataset mnist
+    python3 main.py --num_gpus 1 --dataset cifar10 --mode eval
 
 The eval data is logged in eval_data.json
+
+## Other "modes"
+
+    attack, attack_eval, plot
+
+## Files:
+
+The most basic model is in models/pixeldp_cnn.py, with robustness tests in
+models/utils/robustness.py, and trained/evaluated through
+models/{train,evaluate}.py.
+
+Attacks are implemented in attacks/carlini.py and attacks/pgd.py.
+
