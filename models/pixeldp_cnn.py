@@ -23,7 +23,6 @@ import numpy as np
 import tensorflow as tf
 import six
 import math
-import utils
 
 from tensorflow.python.training import moving_averages
 
@@ -41,9 +40,14 @@ class Model(pixeldp.Model):
         """
         pixeldp.Model.__init__(self, hps, images, labels, mode)
 
-    def _build_model(self):
+    def _build_model(self, inputs_tensor=None, labels_tensor=None):
         """Build the core model within the graph."""
         assert(self.hps.noise_after_n_layers <= 2)
+        if inputs_tensor != None:
+            self.images = inputs_tensor
+        if labels_tensor != None:
+            self.labels = labels_tensor
+
         input_layer = self.images
 
         with tf.variable_scope('im_dup'):
@@ -94,8 +98,8 @@ class Model(pixeldp.Model):
             x = self._relu(x, self.hps.relu_leakiness)
 
         with tf.variable_scope('logit'):
-            logits = self._fully_connected(x, self.hps.num_classes)
-            self.predictions = tf.nn.softmax(logits)
+            self.logits = self._fully_connected(x, self.hps.num_classes)
+            self.predictions = tf.nn.softmax(self.logits)
 
         with tf.variable_scope('label_dup'):
             ones   = tf.ones([len(self.labels.get_shape())-1], dtype=tf.int32)
@@ -103,7 +107,7 @@ class Model(pixeldp.Model):
 
         with tf.variable_scope('costs'):
             xent = tf.nn.softmax_cross_entropy_with_logits(
-                logits=logits, labels=labels)
+                logits=self.logits, labels=labels)
             self.cost = tf.reduce_mean(xent, name='xent')
             self.cost += self._decay()
 

@@ -35,12 +35,16 @@ def build_input(dataset, data_path, batch_size, standardize_images, mode):
     else:
         raise ValueError('Not supported dataset %s', dataset)
 
-    if mode == 'train':
+    if mode == 'train' and dataset == 'cifar10':
         data_path = os.path.join(data_path, 'data_batch*')
-    elif mode == 'train':
+    elif mode == 'train' and dataset == 'cifar100':
+        data_path = os.path.join(data_path, 'train.bin')
+    elif mode == 'eval' and dataset == 'cifar10':
         data_path = os.path.join(data_path, 'test_batch*')
+    elif mode == 'eval' and dataset == 'cifar100':
+        data_path = os.path.join(data_path, 'test.bin')
     else:
-        raise ValueError('Mode %s does not exist', dataset)
+        raise ValueError('Mode %s does not exist', mode)
 
     depth = 3
     image_bytes = image_size * image_size * depth
@@ -117,16 +121,16 @@ def build_input(dataset, data_path, batch_size, standardize_images, mode):
 
 def maybe_download_and_extract(class_n, dest_directory):
     """Download and extract the tarball.
-  
+
     Args:
       dataset: '10' or '100' for respectice cifar dataset.
       dest_directory: Dirpath for all data.
     Returns:
       images: Dirpath with cifar data.
     """
-  
+
     data_url = 'https://www.cs.toronto.edu/~kriz/cifar-{}-binary.tar.gz'.format(class_n)
-  
+
     if not os.path.exists(dest_directory):
         os.makedirs(dest_directory)
     filename = data_url.split('/')[-1]
@@ -140,8 +144,17 @@ def maybe_download_and_extract(class_n, dest_directory):
         print()
         statinfo = os.stat(filepath)
         print('Successfully downloaded', filename, statinfo.st_size, 'bytes.')
-    extracted_dir_path = os.path.join(dest_directory,
-                                      'cifar-{}-batches-bin'.format(class_n))
+    if class_n == '10':
+        extracted_dir_path = os.path.join(
+            dest_directory,
+            'cifar-{}-batches-bin'.format(class_n)
+        )
+    elif class_n == '100':
+        extracted_dir_path = os.path.join(
+            dest_directory,
+            'cifar-{}-binary'.format(class_n)
+        )
+
     if not os.path.exists(extracted_dir_path):
         tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 

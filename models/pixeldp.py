@@ -20,7 +20,7 @@ import numpy as np
 import tensorflow as tf
 import six
 import math
-import utils
+from models.utils import nn
 
 from tensorflow.python.training import moving_averages
 
@@ -62,10 +62,17 @@ class Model(object):
         self._parseval_ws     = []
         self._extra_train_ops = []
 
-    def build_graph(self):
+        # For PixelDP noise layer
+        self.noise_scale = tf.placeholder(tf.float32, shape=(),
+                                          name='noise_scale')
+
+    def build_graph(self, inputs_tensor=None, labels_tensor=None):
         """Build a whole graph for the model."""
         self.global_step = tf.contrib.framework.get_or_create_global_step()
-        self._build_model()
+
+        with tf.variable_scope('model_graph'):
+            self._build_model(inputs_tensor, labels_tensor)
+
         if self.mode == 'train':
             self._build_train_op()
         self.summaries = tf.summary.merge_all()
@@ -91,30 +98,36 @@ class Model(object):
             return 0
 
     def _build_parseval_update_ops(self):
-          beta = 0.001
+        beta = self.hps.parseval_step
 
-          ops  = []
-          for kernel in self._parseval_convs:
-              #  shape=[3, 3, 3, 16]
-              shape = kernel.get_shape().as_list()
+        ops  = []
+        for kernel in self._parseval_convs:
+            #  shape=[3, 3, 3, 16]
+            shape = kernel.get_shape().as_list()
 
-              w_t        = tf.reshape(kernel, [-1, shape[-1]])
-              w          = tf.transpose(w_t)
-              parseval_k = (1 + beta) * w - beta * tf.matmul(w, tf.matmul(w_t, w))
+            w_t        = tf.reshape(kernel, [-1, shape[-1]])
+            w          = tf.transpose(w_t)
+            for _ in range(self.hps.parseval_loops):
+                w   = (1 + beta) * w - beta * tf.matmul(w, tf.matmul(w_t, w))
+                w_t = tf.transpose(w)
 
-              op = tf.assign(kernel,
-                             tf.reshape(tf.transpose(parseval_k), shape),
-                             validate_shape=True)
+            op = tf.assign(kernel, tf.reshape(w_t, shape), validate_shape=True)
 
-              ops.append(op)
+            ops.append(op)
 
-          for w_t in self._parseval_ws:
-              w = tf.transpose(w_t)
-              parseval_w = (1 + beta) * w - beta * tf.matmul(w, tf.matmul(w_t, w))
-              op = tf.assign(w_t, tf.transpose(parseval_w), validate_shape=True)
-              ops.append(op)
+        for _W in self._parseval_ws:
+            w_t = _W
+            w = tf.transpose(w_t)
 
-          return ops
+            for _ in range(self.hps.parseval_loops):
+                w   = (1 + beta) * w - beta * tf.matmul(w, tf.matmul(w_t, w))
+                w_t = tf.transpose(w)
+
+            op = tf.assign(_W, w_t, validate_shape=True)
+            ops.append(op)
+
+        return ops
+        
 
     def _build_train_op(self):
         """Build training specific ops for the graph."""
@@ -214,7 +227,7 @@ class Model(object):
                     k = kernel
                 elif sensitivity_control_scheme == 'bound':
                     # Sensitivity 1 by L1 normalization
-                    k = utils.l1_normalize(kernel, dim=[0, 1, 3])
+                    k = utils.nn.l1_normalize(kernel, dim=[0, 1, 3])
 
                 # Compute the sensitivity
                 l1_norms = tf.reduce_sum(tf.abs(k), [0, 1, 3], keep_dims=True)
@@ -229,9 +242,6 @@ class Model(object):
         """Pixeldp noise layer."""
         # This is a factor applied to the noise layer,
         # used to rampup the noise at the beginning of training.
-        self.noise_scale = tf.placeholder(tf.float32, shape=(),
-                                          name='noise_scale')
-
         dp_mult = self._dp_mult(sensitivity_norm)
         if sensitivity_control_scheme == 'optimize':
             sensitivity = tf.reduce_prod(self._sensitivities)

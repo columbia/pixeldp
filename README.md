@@ -23,4 +23,3 @@ models/utils/robustness.py, and trained/evaluated through
 models/{train,evaluate}.py.
 
 Attacks are implemented in attacks/carlini.py and attacks/pgd.py.
-

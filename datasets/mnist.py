@@ -44,10 +44,10 @@ def build_input(data_path, batch_size, standardize_images, mode):
   """
   if mode == 'train':
     dataset = train(data_path, standardize_images)
+    dataset  = dataset.shuffle(10000).repeat()
   elif mode == 'eval':
     dataset = test(data_path,  standardize_images)
 
-  dataset  = dataset.shuffle(10000).repeat()
   dataset  = dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
   iterator = dataset.make_one_shot_iterator()
 
