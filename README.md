@@ -1,3 +1,5 @@
+Research paper: https://arxiv.org/abs/1802.03471
+
 ## Train the model.
 
 Chose parameters in main.py, then, e.g.:
