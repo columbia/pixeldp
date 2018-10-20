@@ -46,6 +46,8 @@ def run_one():
         dev = '/gpu:0'
 
     if FLAGS.dataset == 'mnist':
+        _model = pixeldp_cnn
+
         steps_num       = 40000
         eval_data_size  = 10000
         image_size      = 28
@@ -53,8 +55,8 @@ def run_one():
         num_classes     = 10
         relu_leakiness  = 0.0
         lrn_rate        = 0.01
-        lrn_rte_changes = []
-        lrn_rte_vals    = []
+        lrn_rte_changes = [30000]
+        lrn_rte_vals    = [0.01]
         if FLAGS.mode == 'train':
             batch_size = 128
             n_draws    = 1
@@ -62,6 +64,8 @@ def run_one():
             batch_size = 25
             n_draws    = 2000
     elif FLAGS.dataset == 'svhn':
+        _model = pixeldp_resnet
+
         steps_num       = 60000
         eval_data_size  = 26032
         image_size      = 32
@@ -91,11 +95,15 @@ def run_one():
             n_draws    = 2000
 
     if FLAGS.dataset == 'cifar10':
+        _model = pixeldp_resnet
+
         image_size     = 32
         n_channels      = 3
         num_classes    = 10
         relu_leakiness = 0.1
     elif FLAGS.dataset == 'cifar100':
+        _model = pixeldp_resnet
+
         image_size     = 32
         n_channels      = 3
         num_classes    = 100
@@ -132,14 +140,15 @@ def run_one():
             attack_norm='l2',
             sensitivity_norm='l2',
             sensitivity_control_scheme='bound',  # bound or optimize
-            noise_after_n_layers=-1,
+            noise_after_n_layers=1,
             layer_sensitivity_bounds=['l2_l2'],
             noise_after_activation=True,
             parseval_loops=10,
             parseval_step=0.0003,
-            steps_num=90000,
+            steps_num=steps_num,
             eval_data_size=eval_data_size,
     )
+
     #  atk = pgd
     atk = carlini
     #  atk = carlini_robust_precision
@@ -172,7 +181,7 @@ def run_one():
         )
 
     #  _model = pixeldp_cnn
-    _model = pixeldp_resnet
+    #  _model = pixeldp_resnet
     #  _model = madry
 
     if _model == madry:

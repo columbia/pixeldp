@@ -331,7 +331,7 @@ class Attack:
                             "are returning the probability vector ",
                             "(post-softmax).")
 
-                evaluate_every_n_steps = 1
+                evaluate_every_n_steps = 10
                 if iteration % evaluate_every_n_steps == 0\
                         or iteration == self.MAX_ITERATIONS - 1:
                     # Make many predictions to determine if the attacks is a
