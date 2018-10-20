@@ -14,7 +14,6 @@ from multiprocessing import Pool
 
 import attacks.utils
 import datasets
-import models.utils.utils
 
 import attacks.params
 import models
@@ -51,7 +50,7 @@ def train_one(dataset, model_class, model_params, attack_class, attack_params,
         if dir_name == None:
             dir_name = FLAGS.models_dir
 
-        model_dir  = os.path.join(dir_name, models.utils.utils.name_from_params(model_class, model_params))
+        model_dir  = os.path.join(dir_name, models.params.name_from_params(model_class, model_params))
         attack_dir = os.path.join(model_dir, 'attack_results',
                 attacks.params.name_from_params(attack_params))
 
