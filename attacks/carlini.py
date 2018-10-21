@@ -86,8 +86,8 @@ class Attack:
         self.model_dir = model_dir
         batch_size = inputs_shape[0].value
 
-        # Nasty hacks
         if 'imagenet' in self.model_dir and self.model_params.attack_norm_bound:
+            # Nasty hacks
             batch_size = model_params.batch_size
             labels_shape = (batch_size, model_params.num_classes)
             inputs_shape = (batch_size, model_params.image_size,
@@ -109,6 +109,8 @@ class Attack:
         shape = inputs_shape
         self.shape = shape
 
+        # this scope is impartant when loading the models' weights in
+        # train_attack
         with tf.variable_scope('attack'):
             # the variable we're going to optimize over
             modifier = tf.Variable(np.zeros(shape,dtype=np.float32))
