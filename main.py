@@ -168,7 +168,7 @@ def run_one():
         )
     else:
         attack_params = attacks.params.AttackParams(
-            restarts=10,
+            restarts=1,
             n_draws_attack=20,
             n_draws_eval=500,
             attack_norm='l2',
@@ -176,7 +176,7 @@ def run_one():
             num_examples=1000,
             attack_methodolody=attacks.name_from_module(atk),
             targeted=False,
-            sgd_iterations=1000,
+            sgd_iterations=100,
             use_softmax=True
         )
 
