@@ -15,7 +15,7 @@ import plots.plot_robust_accuracy
 import plots.plot_accuracy_under_attack
 import plots.plot_robust_precision_under_attack
 
-from experiments import train_eval_model
+from experiments.experiment import train_eval_model
 
 import tensorflow as tf
 import numpy as np

@@ -14,7 +14,7 @@ from attacks import pgd, params, train_attack, evaluate_attack
 import plots.plot_robust_accuracy
 import plots.plot_accuracy_under_attack
 
-from experiments import train_eval_model, train_eval_attack
+from experiments.experiment import train_eval_model, train_eval_attack
 
 import tensorflow as tf
 import numpy as np

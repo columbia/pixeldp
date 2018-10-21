@@ -8,7 +8,7 @@ import seaborn as sns
 plt.style.use(['classic', 'seaborn-deep', 'seaborn-dark'])
 sns.set(style='whitegrid')
 
-import models.params
+import models.params as model_params
 from flags import FLAGS
 
 import plots.utils
@@ -25,7 +25,7 @@ def plot(file_name,
     curves_y = []
     if baseline_model != None:
         model_dir = os.path.join(
-                dir_name, models.params.name_from_params(baseline_model, baseline_params))
+                dir_name, model_params.name_from_params(baseline_model, baseline_params))
         with open(os.path.join(model_dir, "eval_data.json")) as f:
             eval_data = json.loads(f.read())
 
@@ -33,7 +33,7 @@ def plot(file_name,
         baseline_acc = plots.utils.accuracy(pred_truth)
 
     for model, param in zip(models, params):
-        model_dir = os.path.join(dir_name, models.params.name_from_params(model, param))
+        model_dir = os.path.join(dir_name, model_params.name_from_params(model, param))
         with open(os.path.join(model_dir, "eval_data.json")) as f:
             eval_data = json.loads(f.read())
 

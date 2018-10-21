@@ -8,7 +8,7 @@ import seaborn as sns
 plt.style.use(['classic', 'seaborn-deep', 'seaborn-dark'])
 sns.set(style='whitegrid')
 
-import models.params
+import models.params as model_params
 from flags import FLAGS
 
 import plots.utils
@@ -54,7 +54,7 @@ def plot(file_name,
 
         curve_y = [0]
 
-        model_dir = os.path.join(dir_name, models.params.name_from_params(model, param))
+        model_dir = os.path.join(dir_name, model_params.name_from_params(model, param))
         for attack_param in model_attack_params:
             if attack_param.max_attack_size == 0:
                 # This is not an attack...
@@ -104,7 +104,7 @@ def plot(file_name,
         prec_curve_y = []
         rec_curve_y  = []
 
-        model_dir = os.path.join(dir_name, models.params.name_from_params(model, param))
+        model_dir = os.path.join(dir_name, model_params.name_from_params(model, param))
         for attack_param in model_attack_params:
             if attack_param.max_attack_size == 0:
                 # This is not an attack...
