@@ -29,3 +29,6 @@ models/{train,evaluate}.py.
 
 Attacks are implemented in attacks/carlini.py and attacks/pgd.py.
 
+## Pretrained model:
+
+The ResNet for cifar10, L=0.1 (for L2 attacks) is available here: http://www.cs.columbia.edu/~mathias/pixeldp/cifar10.zip
