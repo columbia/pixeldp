@@ -342,10 +342,12 @@ class Attack:
                                 else:
                                     predictions_form_argmax[j, pred] += 1
 
-                        if self.attack_params.n_draws_eval <= n_runs:
-                            break
-                        else:
-                            predictions = self.sess.run(self.predictions, args)
+                            if self.attack_params.n_draws_eval >= n_runs:
+                                break
+                            else:
+                                softmax_predictions = self.sess.run(self.predictions, args)
+                                argmax_predictions = np.argmax(softmax_predictions, axis=1)
+
 
                     if self.attack_params.use_softmax:
                         final_predictions = predictions_form_softmax
